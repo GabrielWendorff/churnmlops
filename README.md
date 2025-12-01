@@ -96,6 +96,28 @@ Observações e troubleshooting
 - Se rodando via Docker e a porta 8000 já estiver ocupada, altere o mapeamento do container (por exemplo `-p 8001:8000`) e acesse `http://localhost:8001/`.
 - O arquivo `model/model.pkl` é esperado estar presente. Se faltar, a API não iniciará corretamente.
 
+Treinar o modelo (gerar `model.pkl`)
+
+O repositório foi configurado para não versionar o arquivo do modelo (ver ` .gitignore`), portanto é necessário treinar o modelo localmente caso o `model/model.pkl` não esteja presente.
+
+1. Ative seu ambiente virtual e instale dependências (veja seção acima).
+2. Execute o script de treino a partir da raiz do projeto:
+
+```bash
+python train.py
+```
+
+3. Ao final, o script irá gerar um arquivo chamado `model.pkl` na raiz do projeto. Mova-o para a pasta `model/` (crie a pasta se necessário):
+
+```bash
+mkdir -p model
+mv model.pkl model/model.pkl
+```
+
+4. Agora a API deve iniciar corretamente e o endpoint `/predict` estará funcional.
+
+Observação: o `train.py` carrega os dados via `preprocessing.load_data()` — verifique se `data/churn.csv` está disponível e no formato esperado.
+
 Contribuições
 
 Pull requests são bem-vindos. Para mudanças no frontend, edite `static/form.html` (o servidor serve este arquivo).
