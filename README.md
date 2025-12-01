@@ -98,8 +98,6 @@ Observações e troubleshooting
 
 Treinar o modelo (gerar `model.pkl`)
 
-O repositório foi configurado para não versionar o arquivo do modelo (ver ` .gitignore`), portanto é necessário treinar o modelo localmente caso o `model/model.pkl` não esteja presente.
-
 1. Ative seu ambiente virtual e instale dependências (veja seção acima).
 2. Execute o script de treino a partir da raiz do projeto:
 
