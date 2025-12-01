@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+model/*.pkl
+*.pkl
+.env
+venv/
+.venv/
+build/
+dist/
+.idea/
+.vscode/
+
+# arquivos do Docker
+*.log

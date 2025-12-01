@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Predição de Churn</title>
+    <!-- Design inspirado nas Human Interface Guidelines (macOS / iOS) -->
+    <style>
+        :root{
+            --bg:#f6f7f8; /* very light gray */
+            --card:#ffffff;
+            --muted:#8b8f95;
+            --accent:#35c16f; /* soft green */
+            --accent-2:#2aa05a;
+            --glass: rgba(255,255,255,0.7);
+            --radius:14px;
+            --shadow-1: 0 6px 18px rgba(22,27,34,0.06);
+            --shadow-2: 0 2px 8px rgba(22,27,34,0.04);
+            --max-width:980px;
+            --gap:18px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        }
+
+        html,body{height:100%;}
+        body{
+            margin:0;
+            background: linear-gradient(180deg, var(--bg), #ffffff 60%);
+            color:#111213;
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:48px 20px;
+        }
+
+        .shell{
+            width:100%;
+            max-width:var(--max-width);
+            display:grid;
+            grid-template-columns: 1fr 420px;
+            gap:32px;
+            align-items:start;
+        }
+
+        /* Header */
+        .header{
+            grid-column:1/-1;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:16px;
+            margin-bottom:6px;
+        }
+        h1{
+            font-weight:600;
+            margin:0;
+            font-size:20px;
+            letter-spacing: -0.2px;
+            color:#0b0b0b;
+        }
+        p.lead{
+            margin:0;
+            color:var(--muted);
+            font-size:13px;
+        }
+
+        /* Card containing form */
+        .card{
+            background:var(--card);
+            border-radius:var(--radius);
+            padding:22px;
+            box-shadow:var(--shadow-1);
+            border:1px solid rgba(15,20,25,0.04);
+        }
+
+        form{
+            display:grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap:var(--gap);
+        }
+
+        label.field{
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+            font-size:13px;
+            color:var(--muted);
+        }
+
+        /* Full width elements (span both columns) */
+        .full{grid-column:1/-1}
+
+        input[type="number"], select{
+            -webkit-appearance:none;
+            appearance:none;
+            background: linear-gradient(180deg, #fbfbfb, #fff);
+            border:1px solid rgba(15,20,25,0.06);
+            padding:12px 14px;
+            border-radius:10px;
+            font-size:15px;
+            color:#0b0b0b;
+            box-shadow: var(--shadow-2) inset;
+            transition: box-shadow .18s ease, border-color .18s ease, transform .06s ease;
+        }
+
+        input[type="number"]:focus, select:focus{
+            outline:none;
+            border-color: color-mix(in srgb, var(--accent) 40%, #000 0%);
+            box-shadow: 0 6px 18px rgba(53,193,111,0.12);
+            transform: translateY(-1px);
+        }
+
+        /* small helper styles for boolean-like fields */
+        .hstack{display:flex;gap:12px;align-items:center}
+        .muted{color:var(--muted);font-size:13px}
+
+        /* Submit area */
+        .actions{grid-column:1/-1;display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:4px}
+        .btn{
+            flex:1 1 auto;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            gap:10px;
+            border:0;
+            cursor:pointer;
+            padding:12px 16px;
+            border-radius:12px;
+            font-weight:600;
+            color: white;
+            background: linear-gradient(180deg, var(--accent), var(--accent-2));
+            box-shadow: 0 8px 20px rgba(42,160,90,0.16), inset 0 -1px 0 rgba(255,255,255,0.06);
+            transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+        }
+        .btn:active{transform:translateY(1px)}
+        .btn[disabled]{opacity:0.6;cursor:not-allowed;box-shadow:none}
+
+        /* secondary button */
+        .btn.ghost{
+            background:transparent;color:var(--muted);border:1px solid rgba(15,20,25,0.05);box-shadow:none;font-weight:600;padding:10px 14px;border-radius:10px
+        }
+
+        /* Result panel (Apple Card style) */
+        .result-card{
+            background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.9));
+            border-radius:16px;
+            padding:20px;
+            box-shadow: 0 10px 30px rgba(12,16,20,0.07);
+            border:1px solid rgba(15,20,25,0.04);
+            min-height:120px;
+        }
+        .result-title{font-size:13px;color:var(--muted);margin:0 0 8px 0}
+        .result-value{font-size:28px;font-weight:700;margin:0;color:#0b0b0b}
+        .result-sub{margin-top:8px;color:var(--muted);font-size:13px}
+
+        /* Responsive */
+        @media (max-width:880px){
+            .shell{grid-template-columns:1fr;}
+            form{grid-template-columns:1fr;}
+            .actions{flex-direction:column-reverse}
+        }
+    </style>
+</head>
+<body>
+    <!--
+        form.html
+        Versão estilizada inspirada em macOS/iOS Human Interface Guidelines.
+        Mantive os campos originais e melhorei feedback visual e responsividade.
+    -->
+
+    <div class="shell">
+        <div class="header">
+            <div>
+                <h1>Predição de Churn</h1>
+                <p class="lead">Preencha os dados do cliente para estimar risco de churn.</p>
+            </div>
+            <div class="muted">Modelo local • <strong>API: /predict</strong></div>
+        </div>
+
+        <div class="card">
+            <form id="predictForm" autocomplete="off">
+                <label class="field">
+                    <span>Credit Score</span>
+                    <input type="number" id="credit_score" required placeholder="e.g. 650">
+                </label>
+
+                <label class="field">
+                    <span>Country</span>
+                    <select id="country">
+                        <option value="France">France</option>
+                        <option value="Spain">Spain</option>
+                        <option value="Germany">Germany</option>
+                    </select>
+                </label>
+
+                <label class="field">
+                    <span>Gender</span>
+                    <select id="gender">
+                        <option value="Female">Female</option>
+                        <option value="Male">Male</option>
+                    </select>
+                </label>
+
+                <label class="field">
+                    <span>Age</span>
+                    <input type="number" id="age" placeholder="Idade">
+                </label>
+
+                <label class="field">
+                    <span>Tenure</span>
+                    <input type="number" id="tenure" placeholder="Tempo de relacionamento (meses)">
+                </label>
+
+                <label class="field full">
+                    <span>Balance</span>
+                    <input type="number" id="balance" step="0.01" placeholder="Saldo médio">
+                </label>
+
+                <label class="field">
+                    <span>Products Number</span>
+                    <input type="number" id="products_number" placeholder="Número de produtos">
+                </label>
+
+                <label class="field">
+                    <span>Credit Card (1 = Sim / 0 = Não)</span>
+                    <input type="number" id="credit_card" min="0" max="1">
+                </label>
+
+                <label class="field">
+                    <span>Active Member (1 = Sim / 0 = Não)</span>
+                    <input type="number" id="active_member" min="0" max="1">
+                </label>
+
+                <label class="field full">
+                    <span>Estimated Salary</span>
+                    <input type="number" id="estimated_salary" step="0.01" placeholder="Salário estimado">
+                </label>
+
+                <div class="actions">
+                    <button id="sendBtn" class="btn" type="button">Enviar</button>
+                    <button id="resetBtn" class="btn ghost" type="reset">Limpar</button>
+                </div>
+            </form>
+        </div>
+
+                <div class="result-card">
+                        <p class="result-title">Resultado</p>
+                        <div id="result" aria-live="polite">
+                                <!-- Estrutura atualizável pelo JS -->
+                                <div id="resultBadge" style="border-radius:12px;padding:14px;display:inline-block;">
+                                    <div id="resultIcon" style="font-size:18px;margin-bottom:6px">—</div>
+                                    <div id="resultMessage" style="font-weight:700;font-size:16px;">Aguardando</div>
+                                    <div id="resultMeta" style="margin-top:6px;color:var(--muted);font-size:13px">Preencha o formulário e clique em Enviar para ver a predição.</div>
+                                </div>
+                        </div>
+                </div>
+    </div>
+
+    <script>
+        // Melhorias JS: loading, desabilitar botão e feedback elegante
+        const sendBtn = document.getElementById('sendBtn');
+        const resultBox = document.getElementById('result');
+        const form = document.getElementById('predictForm');
+
+        function setLoading(on){
+            if(on){
+                sendBtn.disabled = true;
+                sendBtn.textContent = 'Enviando...';
+            } else {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Enviar';
+            }
+        }
+
+                function showResult(obj){
+                        // Limpa estados anteriores
+                        const badge = document.getElementById('resultBadge');
+                        const iconEl = document.getElementById('resultIcon');
+                        const msgEl = document.getElementById('resultMessage');
+                        const metaEl = document.getElementById('resultMeta');
+
+                        // Default
+                        badge.style.background = 'transparent';
+                        badge.style.color = 'inherit';
+                        badge.style.border = '1px solid rgba(15,20,25,0.04)';
+
+                        // Se API retornou objeto no formato solicitado
+                        if(obj && typeof obj === 'object' && ('churn_predito' in obj || 'probabilidade_de_churn' in obj)){
+                                const pred = obj.churn_predito;
+                                const probRaw = Number(obj.probabilidade_de_churn ?? obj.probability ?? obj.prob ?? 0);
+                                const pct = Math.round(probRaw * 100);
+
+                                // Determinar faixa e cores
+                                let level = 'baixo';
+                                let color = '#d4f5e5'; // verde claro
+                                let textColor = '#000';
+                                let emoji = '🟢';
+                                let label = `Risco baixo (${pct}%).`;
+
+                                if(pct > 65){
+                                    level = 'muito-alto';
+                                    color = '#ff5c5c'; // vermelho
+                                    textColor = '#fff';
+                                    emoji = '🔥';
+                                    label = `Risco MUITO ALTO de churn! Probabilidade: ${pct}%.`;
+                                } else if(pct > 50){
+                                    level = 'alto';
+                                    color = '#ff9a3c'; // laranja
+                                    textColor = '#fff';
+                                    emoji = '⚠️';
+                                    label = `Risco alto de churn! Probabilidade: ${pct}%.`;
+                                } else if(pct > 25){
+                                    level = 'moderado';
+                                    color = '#ffd94d'; // amarelo
+                                    textColor = '#000';
+                                    emoji = '🟡';
+                                    label = `Risco moderado de churn (${pct}%).`;
+                                } else {
+                                    level = 'baixo';
+                                    color = '#bff0c9'; // verde
+                                    textColor = '#000';
+                                    emoji = '🟢';
+                                    label = `Risco baixo (${pct}%).`;
+                                }
+
+                                // Mensagem principal com base em churn_predito
+                                if(Number(pred) === 1){
+                                    msgEl.textContent = `Atenção: este cliente TEM grande chance de churn.`;
+                                } else {
+                                    msgEl.textContent = `✓ Este cliente provavelmente NÃO fará churn.`;
+                                }
+
+                                // Complemento com probabilidade e label estilizado
+                                metaEl.textContent = `Probabilidade: ${pct}%. ${label}`;
+
+                                // Aplicar estilo
+                                badge.style.background = color;
+                                badge.style.color = textColor;
+                                badge.style.border = 'none';
+                                badge.style.boxShadow = '0 6px 18px rgba(12,16,20,0.06)';
+                                badge.style.display = 'inline-block';
+                                badge.style.borderRadius = '12px';
+
+                                iconEl.textContent = emoji;
+                                iconEl.style.color = textColor;
+                                iconEl.style.fontSize = '18px';
+                                msgEl.style.color = textColor;
+                                metaEl.style.color = textColor === '#fff' ? 'rgba(255,255,255,0.9)' : 'rgba(11,11,11,0.6)';
+
+                        } else if(obj && obj.error){
+                                // Erro de rede/servidor
+                                badge.style.background = '#ffecec';
+                                badge.style.color = '#a00';
+                                iconEl.textContent = '❌';
+                                msgEl.textContent = 'Erro ao obter predição';
+                                metaEl.textContent = obj.error;
+                        } else {
+                                // Caso genérico
+                                iconEl.textContent = '—';
+                                msgEl.textContent = 'Resposta inesperada';
+                                metaEl.textContent = JSON.stringify(obj);
+                        }
+                }
+
+        async function sendPredict(){
+            // construir body com os mesmos campos
+            const body = {
+                credit_score: Number(document.getElementById('credit_score').value),
+                country: document.getElementById('country').value,
+                gender: document.getElementById('gender').value,
+                age: Number(document.getElementById('age').value),
+                tenure: Number(document.getElementById('tenure').value),
+                balance: Number(document.getElementById('balance').value),
+                products_number: Number(document.getElementById('products_number').value),
+                credit_card: Number(document.getElementById('credit_card').value),
+                active_member: Number(document.getElementById('active_member').value),
+                estimated_salary: Number(document.getElementById('estimated_salary').value)
+            };
+
+            try{
+                setLoading(true);
+                const resp = await fetch('http://localhost:8000/predict',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify(body)
+                });
+
+                if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                showResult(data);
+            }catch(err){
+                showResult({error: String(err)});
+            }finally{
+                setLoading(false);
+            }
+        }
+
+        sendBtn.addEventListener('click', sendPredict);
+    </script>
+</body>
+</html>
